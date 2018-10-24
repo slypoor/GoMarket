@@ -8,15 +8,37 @@ import (
 	"html/template"
 	"regexp"
 	"errors"
+	"sync"
+	"crypto/subtle"
+	"github.com/satori/go.uuid"
 )
+
+type authenticationMiddleware struct {
+	wrappedHandler http.Handler
+}
+
+type Client struct {
+	loggedIn bool
+}
 
 type Page struct {
 	Title string
 	Body []byte
 }
 
-var templates = template.Must(template.ParseFiles("templates/edit.html", "templates/view.html", "templates/login.html"))
+type helloWorldHandler struct {
+
+}
+
+func (h helloWorldHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Hello World")
+}
+
+var templates = template.Must(template.ParseFiles("templates/edit.html", "templates/view.html", "templates/login.html", "templates/failed-login.html"))
 var validPath = regexp.MustCompile("^/(edit|save|view|login)/([a-zA-Z0-9]+)$")
+var sessionStore map[string]Client
+var storageMutex sync.RWMutex
+
 
 func loadPage(title string) (*Page, error) {
 	filename := title + ".txt"
@@ -88,25 +110,121 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("method:" , r.Method)
-	p := &Page{Title: "Login", Body: nil}
-	if r.Method == "GET" {
-		renderTemplate(w, "login", p)
-		//if err != nil {
-		//		http.Error(w, err.Error(), http.StatusInternalServerError)
-		//	}
-		//t.Execute(w, nil)
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		if err != http.ErrNoCookie {
+			fmt.Fprint(w, err)
+			return
+		} else {
+			err = nil
+		}
+	}
+	var present bool
+	var client Client
+	if cookie != nil {
+		storageMutex.RLock()
+		client, present = sessionStore[cookie.Value]
+		storageMutex.RUnlock()
 	} else {
-		r.ParseForm()
-		fmt.Println("username:", r.Form["username"])
-		fmt.Println("password:", r.Form["password"])
+		present = false
+	}
+
+	if present == false {
+		u, err := uuid.NewV4()
+		if err != nil {
+			return
+		}
+		uuidValue := u.String()
+		cookie = &http.Cookie {
+			Name: "session",
+			Value: uuidValue,
+		}
+		client = Client{false}
+		storageMutex.Lock()
+		sessionStore[cookie.Value] = client
+		storageMutex.Unlock()
+	}
+
+	http.SetCookie(w, cookie)
+
+	err = r.ParseForm()
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
+
+	if subtle.ConstantTimeCompare([]byte(r.FormValue("password")), []byte("password123")) == 1 {
+		client.loggedIn = true
+		fmt.Fprintln(w, "Thank you for logging in.")
+		storageMutex.Lock()
+		sessionStore[cookie.Value] = client
+		storageMutex.Unlock()
+	} else {
+		p := &Page{Title: "Failed Login Attempt", Body: nil}
+		renderTemplate(w, "failed-login", p)
 	}
 }
 
+func (h authenticationMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		if err != http.ErrNoCookie {
+			fmt.Fprint(w, err)
+			return
+		} else {
+			err = nil
+		}
+	}
+
+	var present bool
+	var client Client
+	if cookie != nil {
+		storageMutex.RLock()
+		client, present = sessionStore[cookie.Value]
+		storageMutex.RUnlock()
+	} else {
+		present = false
+	}
+
+	if present == false {
+		u, err := uuid.NewV4()
+		if err != nil {
+			return
+		}
+		uuidValue := u.String()
+		cookie = &http.Cookie{
+			Name: "session",
+			Value: uuidValue,
+		}
+		client = Client{false}
+		storageMutex.Lock()
+		sessionStore[cookie.Value] = client
+		storageMutex.Unlock()
+	}
+
+	http.SetCookie(w, cookie)
+	if client.loggedIn == false {
+		p := &Page{Title: "Login to Marketplace", Body: nil}
+	        renderTemplate(w, "login", p)
+		return
+	}
+
+	if client.loggedIn == true {
+		h.wrappedHandler.ServeHTTP(w, r)
+		return
+	}
+}
+
+func authenticate(h http.Handler) authenticationMiddleware {
+	return authenticationMiddleware{h}
+}
+
 func main() {
+	sessionStore = make(map[string]Client)
+	http.Handle("/login/", authenticate(helloWorldHandler{}))
+	http.HandleFunc("/home/", loginHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
-	http.HandleFunc("/login/", loginHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
