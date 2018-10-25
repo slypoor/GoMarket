@@ -7,10 +7,24 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+var templates = template.Must(template.ParseFiles("templates/index.html"))
+
 var (
 	key = []byte("1234567890123456")
 	store = sessions.NewCookieStore(key)
 )
+
+type Page struct {
+	Title string
+	Body []byte
+}
+
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	err := templates.ExecuteTemplate(w, tmpl+".html", p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
 
 func secret(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "cookie-name")
