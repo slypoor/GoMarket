@@ -10,22 +10,27 @@ import (
 	"errors"
 	"sync"
 	"crypto/subtle"
+
 	"github.com/satori/go.uuid"
 )
 
+// Middleware struct for handling middleware things.
 type authenticationMiddleware struct {
 	wrappedHandler http.Handler
 }
 
+// Client struct to hold the current session.
 type Client struct {
 	loggedIn bool
 }
 
+// Page struct to hold the current page title and body data.
 type Page struct {
 	Title string
 	Body []byte
 }
 
+// Default struct to just host a basic website, not really important at all.
 type helloWorldHandler struct {
 
 }
@@ -115,8 +120,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		if err != http.ErrNoCookie {
 			fmt.Fprint(w, err)
 			return
-		} else {
-			err = nil
 		}
 	}
 	var present bool
@@ -171,8 +174,6 @@ func (h authenticationMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		if err != http.ErrNoCookie {
 			fmt.Fprint(w, err)
 			return
-		} else {
-			err = nil
 		}
 	}
 

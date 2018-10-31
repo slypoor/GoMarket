@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"encoding/json"
 	"net/http"
 	"html/template"
+	"encoding/json"
+
 	"github.com/gorilla/sessions"
 	"github.com/gorilla/mux"
 )
@@ -18,10 +19,12 @@ var (
 	store = sessions.NewCookieStore(key)
 )
 
+// Page stuct to generate when creating a new page.
 type Page struct {
 	Title string
 }
 
+// Person struct to be used for the REST API.
 type Person struct {
     ID        string   `json:"id,omitempty"`
     Firstname string   `json:"firstname,omitempty"`
@@ -29,6 +32,7 @@ type Person struct {
     Address   *Address `json:"address,omitempty"`
 }
 
+// Address struct used inside the Person struct.
 type Address struct {
     City  string `json:"city,omitempty"`
     State string `json:"state,omitempty"`
@@ -86,13 +90,13 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session.Save(r, w)
 }
 
-// REST API Handlers
+// GetPeople Get all People and return JSON format from REST API.
 func GetPeople(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(people)
 }
 
-// Loops through mapped names from the incoming request to check
-// if the id params sent match any person in the Person struct
+// GetPerson Loops through mapped names from the incoming request to check
+// if the id params sent match any person in the Person struct, return the JSON of that Person
 func GetPerson(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	for _, item := range people {
@@ -104,6 +108,7 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&Person{})
 }
 
+// CreatePerson 
 func CreatePerson(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	var person Person
@@ -120,6 +125,7 @@ func CreatePerson(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(people)
 }
 
+// DeletePerson Remove a Person from the Person struct.
 func DeletePerson(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	for index, item := range people {
