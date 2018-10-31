@@ -1,15 +1,15 @@
 package main
 
 import (
-	"log"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"html/template"
-	"regexp"
-	"errors"
-	"sync"
 	"crypto/subtle"
+	"errors"
+	"fmt"
+	"html/template"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"regexp"
+	"sync"
 
 	"github.com/satori/go.uuid"
 )
@@ -27,12 +27,11 @@ type Client struct {
 // Page struct to hold the current page title and body data.
 type Page struct {
 	Title string
-	Body []byte
+	Body  []byte
 }
 
 // Default struct to just host a basic website, not really important at all.
 type helloWorldHandler struct {
-
 }
 
 func (h helloWorldHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +42,6 @@ var templates = template.Must(template.ParseFiles("templates/edit.html", "templa
 var validPath = regexp.MustCompile("^/(edit|save|view|login)/([a-zA-Z0-9]+)$")
 var sessionStore map[string]Client
 var storageMutex sync.RWMutex
-
 
 func loadPage(title string) (*Page, error) {
 	filename := title + ".txt"
@@ -68,7 +66,7 @@ func (p *Page) save() error {
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
-func makeHandler(fn func (http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
@@ -138,8 +136,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		uuidValue := u.String()
-		cookie = &http.Cookie {
-			Name: "session",
+		cookie = &http.Cookie{
+			Name:  "session",
 			Value: uuidValue,
 		}
 		client = Client{false}
@@ -194,7 +192,7 @@ func (h authenticationMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		}
 		uuidValue := u.String()
 		cookie = &http.Cookie{
-			Name: "session",
+			Name:  "session",
 			Value: uuidValue,
 		}
 		client = Client{false}
@@ -206,7 +204,7 @@ func (h authenticationMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	http.SetCookie(w, cookie)
 	if client.loggedIn == false {
 		p := &Page{Title: "Login to Marketplace", Body: nil}
-	        renderTemplate(w, "login", p)
+		renderTemplate(w, "login", p)
 		return
 	}
 

@@ -1,21 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
-	"html/template"
-	"encoding/json"
 
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 var templates = template.Must(template.ParseFiles("../templates/index.html", "../templates/login.html"))
 
 var (
 	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-	key = []byte("super-secret-key")
+	key   = []byte("super-secret-key")
 	store = sessions.NewCookieStore(key)
 )
 
@@ -26,16 +26,16 @@ type Page struct {
 
 // Person struct to be used for the REST API.
 type Person struct {
-    ID        string   `json:"id,omitempty"`
-    Firstname string   `json:"firstname,omitempty"`
-    Lastname  string   `json:"lastname,omitempty"`
-    Address   *Address `json:"address,omitempty"`
+	ID        string   `json:"id,omitempty"`
+	Firstname string   `json:"firstname,omitempty"`
+	Lastname  string   `json:"lastname,omitempty"`
+	Address   *Address `json:"address,omitempty"`
 }
 
 // Address struct used inside the Person struct.
 type Address struct {
-    City  string `json:"city,omitempty"`
-    State string `json:"state,omitempty"`
+	City  string `json:"city,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 var people []Person
@@ -67,7 +67,7 @@ func secret(w http.ResponseWriter, r *http.Request) {
 func login(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "cookie-name")
 
-	fmt.Println("method:" , r.Method)
+	fmt.Println("method:", r.Method)
 	if r.Method == "GET" {
 		renderTemplate(w, "login", &Page{Title: "Login"})
 	} else {
@@ -154,4 +154,3 @@ func main() {
 	router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
-
