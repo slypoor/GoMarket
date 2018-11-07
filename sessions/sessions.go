@@ -11,17 +11,18 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-var templates = template.Must(template.ParseFiles("../templates/index.html", "../templates/login.html"))
+var templates = template.Must(template.ParseFiles("templates/index.html", "templates/login.html", "templates/secret.html"))
 
 var (
 	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-	key   = []byte("super-secret-key")
+	key   = []byte("aS2jd(kel!kS3jvnA3glp)k!md@gan71UsnSXaqe*j")
 	store = sessions.NewCookieStore(key)
 )
 
 // Page stuct to generate when creating a new page.
 type Page struct {
-	Title string
+	Title  string
+	Script string
 }
 
 // Person struct to be used for the REST API.
@@ -60,8 +61,9 @@ func secret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Print secret message
-	fmt.Fprintln(w, "The cake is a lie!")
+	// Load secret template
+	renderTemplate(w, "secret", &Page{Title: "Secret", Script: "https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"})
+
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
